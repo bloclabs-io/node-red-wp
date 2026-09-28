@@ -1,0 +1,48 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "nrwp/data",
+	"version": "2.0.0",
+	"title": "Node-RED Data",
+	"category": "widgets",
+	"icon": "rss",
+	"description": "Display a live data point pushed from Node-RED. The value updates in real time without reloading the page.",
+	"keywords": [ "node-red", "iot", "live", "sensor" ],
+	"textdomain": "node-red-wp",
+	"attributes": {
+		"dataKey": {
+			"type": "string",
+			"default": ""
+		},
+		"title": {
+			"type": "string",
+			"default": ""
+		},
+		"unit": {
+			"type": "string",
+			"default": ""
+		},
+		"fallback": {
+			"type": "string",
+			"default": "—"
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": true,
+		"color": {
+			"text": true,
+			"background": true
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true
+		}
+	},
+	"editorScript": "file:./index.js",
+	"render": "file:./render.php"
+}

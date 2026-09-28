@@ -1,0 +1,205 @@
+[
+    {
+        "id": "a1f0c0de00000001",
+        "type": "tab",
+        "label": "Node-RED → WordPress",
+        "disabled": false,
+        "info": "Pushes live weather data from Open-Meteo (no API key needed) into the Node-RED WordPress plugin.\n\nSet `WP_URL` and `NRWP_TOKEN` under this flow's *Environment Variables* (double-click the tab), then deploy.",
+        "env": [
+            {
+                "name": "WP_URL",
+                "value": "https://example.com",
+                "type": "str"
+            },
+            {
+                "name": "NRWP_TOKEN",
+                "value": "",
+                "type": "cred"
+            }
+        ]
+    },
+    {
+        "id": "a1f0c0de00000002",
+        "type": "inject",
+        "z": "a1f0c0de00000001",
+        "name": "Every 5 minutes",
+        "props": [],
+        "repeat": "300",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "x": 140,
+        "y": 80,
+        "wires": [
+            [
+                "a1f0c0de00000003"
+            ]
+        ]
+    },
+    {
+        "id": "a1f0c0de00000003",
+        "type": "http request",
+        "z": "a1f0c0de00000001",
+        "name": "Get current weather",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=50.12&longitude=-122.95&current=temperature_2m,wind_speed_10m,wind_direction_10m",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 350,
+        "y": 80,
+        "wires": [
+            [
+                "a1f0c0de00000004"
+            ]
+        ]
+    },
+    {
+        "id": "a1f0c0de00000004",
+        "type": "function",
+        "z": "a1f0c0de00000001",
+        "name": "Build WordPress payload",
+        "func": "const current = msg.payload && msg.payload.current;\n\nif (msg.statusCode !== 200 || !current) {\n    node.warn('No weather data received, skipping this update.');\n    return null;\n}\n\n// One request updates several keys at once.\nmsg.payload = {\n    whistler_temp: current.temperature_2m,\n    whistler_wind_speed: current.wind_speed_10m,\n    whistler_wind_dir: current.wind_direction_10m\n};\n\nmsg.method = 'POST';\nmsg.url = env.get('WP_URL').replace(/\\/$/, '') + '/wp-json/nrwp/v1/data';\nmsg.headers = {\n    'Content-Type': 'application/json',\n    'X-NRWP-Token': env.get('NRWP_TOKEN')\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 80,
+        "wires": [
+            [
+                "a1f0c0de00000005"
+            ]
+        ]
+    },
+    {
+        "id": "a1f0c0de00000005",
+        "type": "http request",
+        "z": "a1f0c0de00000001",
+        "name": "Send to WordPress",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 810,
+        "y": 80,
+        "wires": [
+            [
+                "a1f0c0de00000006"
+            ]
+        ]
+    },
+    {
+        "id": "a1f0c0de00000006",
+        "type": "debug",
+        "z": "a1f0c0de00000001",
+        "name": "WordPress response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "statusCode",
+        "statusType": "msg",
+        "x": 1030,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "a1f0c0de00000007",
+        "type": "inject",
+        "z": "a1f0c0de00000001",
+        "name": "Read a value back",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "1",
+        "topic": "",
+        "x": 150,
+        "y": 160,
+        "wires": [
+            [
+                "a1f0c0de00000008"
+            ]
+        ]
+    },
+    {
+        "id": "a1f0c0de00000008",
+        "type": "function",
+        "z": "a1f0c0de00000001",
+        "name": "GET /data/whistler_temp",
+        "func": "msg.method = 'GET';\nmsg.url = env.get('WP_URL').replace(/\\/$/, '') + '/wp-json/nrwp/v1/data/whistler_temp';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 160,
+        "wires": [
+            [
+                "a1f0c0de00000009"
+            ]
+        ]
+    },
+    {
+        "id": "a1f0c0de00000009",
+        "type": "http request",
+        "z": "a1f0c0de00000001",
+        "name": "Read from WordPress",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 620,
+        "y": 160,
+        "wires": [
+            [
+                "a1f0c0de0000000a"
+            ]
+        ]
+    },
+    {
+        "id": "a1f0c0de0000000a",
+        "type": "debug",
+        "z": "a1f0c0de00000001",
+        "name": "Current value",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload.value",
+        "targetType": "msg",
+        "statusVal": "payload.value",
+        "statusType": "msg",
+        "x": 840,
+        "y": 160,
+        "wires": []
+    }
+]

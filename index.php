@@ -1,3 +1,6 @@
 <?php
-
-// silence is golden
+/**
+ * Silence is golden.
+ *
+ * @package node-red-wp
+ */
