@@ -69,10 +69,12 @@ echo "$WP_URL" > url.txt
 
 echo "Starting PHP web server on $WP_URL"
 if [ -f server.pid ]; then kill -- -"$(cat server.pid)" 2>/dev/null || kill "$(cat server.pid)" 2>/dev/null || true; fi
-# Own session (so the whole worker group can be stopped with `kill -- -<pid>`), detached from our stdio.
+# Own session (so it can be stopped with `kill -- -<pid>`), detached from our stdio.
+# Single worker by default: PHP 8.4.26's experimental multi-worker mode (PHP_CLI_SERVER_WORKERS)
+# dropped responses to wp-admin/post-new.php in CI. Set PHP_CLI_SERVER_WORKERS to opt back in.
 (
 	cd wordpress
-	PHP_CLI_SERVER_WORKERS="${PHP_CLI_SERVER_WORKERS:-4}" setsid php -S "127.0.0.1:$PORT" < /dev/null > "$TEST_DIR/server.log" 2>&1 &
+	PHP_CLI_SERVER_WORKERS="${PHP_CLI_SERVER_WORKERS:-1}" setsid php -S "127.0.0.1:$PORT" < /dev/null > "$TEST_DIR/server.log" 2>&1 &
 	echo $! > "$TEST_DIR/server.pid"
 )
 for _ in $(seq 1 30); do
