@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer
+
+      - name: PHP syntax
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+
+      - name: JS syntax
+        if: matrix.php == '8.4'
+        run: node --check assets/js/nrwp.js && node --check blocks/data/index.js
+
+      - name: PHPCS (WordPress Coding Standards, PHPCompatibility 7.4+)
+        if: matrix.php == '8.4'
+        run: |
+          composer install --no-interaction --no-progress
+          composer lint
+
+  test:
+    name: WordPress ${{ matrix.wp }} / PHP ${{ matrix.php }} / Node-RED ${{ matrix.node-red }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { wp: '6.5.5', php: '7.4', node-red: '4' }
+          - { wp: 'latest', php: '7.4', node-red: '5' }
+          - { wp: 'latest', php: '8.4', node-red: '5' }
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          extensions: sqlite3, pdo_sqlite, mbstring, intl
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install test dependencies
+        run: |
+          npm ci
+          npm install --no-save "node-red@${{ matrix.node-red }}"
+          npx playwright install --with-deps chromium
+
+      - name: Set up WordPress
+        run: tests/bin/setup-wordpress.sh ${{ matrix.wp }}
+
+      - name: Run tests
+        run: npm test
+
+      - name: WordPress debug log
+        if: always()
+        run: cat .wp-test/debug.log 2>/dev/null || true
+
+  zip:
+    name: Plugin zip
+    runs-on: ubuntu-latest
+    needs: [ lint, test ]
+    steps:
+      - uses: actions/checkout@v5
+      - run: bin/build-zip.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: node-red-wp
+          path: node-red-wp.zip
