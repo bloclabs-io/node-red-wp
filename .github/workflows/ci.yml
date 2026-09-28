@@ -79,9 +79,14 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: WordPress debug log
+      - name: WordPress debug log and web server log
         if: always()
-        run: cat .wp-test/debug.log 2>/dev/null || true
+        run: |
+          echo '::group::debug.log'; cat .wp-test/debug.log 2>/dev/null || true; echo '::endgroup::'
+          echo '::group::server.log (errors and non-2xx/3xx)'
+          grep -vE '(Accepted|Closing|\[(2|3)[0-9][0-9]\]:)' .wp-test/server.log 2>/dev/null || true
+          echo '::endgroup::'
+          php -i | grep -E '^(opcache\.enable_cli|opcache\.jit|memory_limit)' || true
 
   zip:
     name: Plugin zip
